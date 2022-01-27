@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>3D WEBGL LAB1</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <link rel='stylesheet' type='text/css' media='screen' href='main.css'>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js" integrity="sha512-zhHQR0/H5SEBL3Wn6yYSaTTZej12z0hVZKOv3TwCUXT1z5qeqGcXJLLrbERYRScEDDpYIJhPC1fk31gqR783iQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src='/js/utils.js'></script>
+    <script src='/js/drawObject.js'></script>
+    <script src='/js/main.js'></script>
+    <script id="shader-vs" type="x-shader/x-vertex">
+        attribute vec3 aVertexPosition;
+        attribute vec3 aVertexNormal;
+        attribute vec2 aTexCoord;
+
+        uniform vec4 uVertexColor;
+        uniform mat4 uModelViewMatrix;
+        uniform mat4 uProjectionMatrix;
+         
+        struct _light 
+        { 
+            vec3 diffuse; 
+            vec3 ambient; 
+            vec3 position; 
+        };
+
+        const int n = 1; // lights count
+
+        uniform _light lights [n];
+
+        vec4 mvPosition; // непроецированная позиция вершины 
+        vec4 lPos;
+        vec3 N;
+
+        varying mediump vec4 vColor;
+        varying vec2 vTexCoord;
+        varying highp vec3 vLighting;
+
+
+        void main(void) {
+            mvPosition = uModelViewMatrix * vec4(aVertexPosition, 1.0);
+            gl_PointSize = 0.1;
+            gl_Position = uProjectionMatrix * mvPosition;
+
+            //calc lighting
+            N = normalize((uModelViewMatrix * vec4(aVertexNormal, 0.0)).xyz);
+            lPos = uModelViewMatrix * vec4(lights[0].position, 1.0);
+            vec3 L = normalize(lPos.xyz - mvPosition.xyz);
+            highp float Kd = max(dot(L, N), 0.0);
+
+            vColor = uVertexColor; 
+            vLighting = Kd * lights[0].diffuse + lights[0].ambient;
+            vTexCoord = aTexCoord;
+        }    
+    </script>
+
+    <script id="shader-fs" type="x-shader/x-fragment">
+        varying mediump vec4 vColor;
+        varying highp vec3 vLighting;
+
+        void main(void) {
+            gl_FragColor = vec4(vColor.rgb * vLighting, vColor.a);
+        }
+    </script>
+
+    <script id="shader-fs-texture" type="x-shader/x-fragment">
+        varying mediump vec4 vColor;
+        uniform sampler2D uTexture;
+        varying mediump vec2 vTexCoord;
+        varying highp vec3 vLighting;
+
+        void main(void) {
+            highp vec4 texelColor = texture2D(uTexture, vTexCoord);
+            gl_FragColor = vec4(texelColor.rgb * vLighting, texelColor.a);
+        }
+    </script>
+</head>
+
+<body>
+    <canvas id="glcanvas" class="mainCanvas">
+        Your browser doesn't appear to support the HTML5 <code>&lt;canvas&gt;</code> element.
+    </canvas>
+    <br>
+    <div class="switchContainer">
+        <div class="switchText">Ortho Projection</div>
+        <label class="switch">
+            <input id="oSwitch" type="checkbox">
+            <span class="slider round"></span>
+        </label>
+    </div>
+    <br>
+    <div class="switchContainer">
+        <div class="switchText">Perspective Projection</div>
+        <label class="switch">
+            <input id="pSwitch" type="checkbox" checked>
+            <span class="slider round"></span>
+        </label>
+    </div>
+    <div class="range-slider">
+        <input id="lAmbient" class="range-slider__range" type="range" value="100" min="0" max="100">
+        <span class="range-slider__value">Light ambient</span>
+    </div> 
+    <div class="range-slider">
+        <input id="lDiffuse" class="range-slider__range" type="range" value="10" min="0" max="100">
+        <span class="range-slider__value">Light diffuse</span>
+    </div> 
+</body>
+</html>
